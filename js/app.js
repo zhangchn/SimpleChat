@@ -8,26 +8,37 @@ function getCurrentMessages() {
     }
     return result;
 }
-function displayMessage(message) {
+function displayMessage(message, inDiv) {
+    let messageDiv;
     const thread = document.querySelector('div.thread');
-    const messageDiv = document.createElement('div');
-    const nameP = document.createElement('p');
-    const contentP =  document.createElement('p');
-    messageDiv.dataset['message'] = JSON.stringify(message);
-    nameP.classList.add('name');
-    contentP.classList.add('content');
-    messageDiv.classList.add('message');
-    messageDiv.classList.add(message.role);
-    if (message.role === 'user') {
-        nameP.textContent = 'Me:';
-    } else if (message.role === 'assistant') {
-        nameP.textContent = 'AI:';
+    let created;
+    let contentP;
+    if (inDiv && inDiv instanceof Element) {
+        messageDiv = inDiv;
+        contentP = inDiv.querySelector('p.content');
+    } else {
+        messageDiv = document.createElement('div');
+        const nameP = document.createElement('p');
+        nameP.classList.add('name');
+        contentP =  document.createElement('p');
+        messageDiv.classList.add('message');
+        messageDiv.classList.add(message.role);
+        contentP.classList.add('content');
+        if (message.role === 'user') {
+            nameP.textContent = 'Me:';
+        } else if (message.role === 'assistant') {
+            nameP.textContent = 'AI:';
+        }
+        messageDiv.appendChild(nameP);
+        messageDiv.appendChild(document.createElement('br'));
+        messageDiv.appendChild(contentP);
+        thread.appendChild(messageDiv);
+        created = true;
+        console.log('message div created')
     }
+    messageDiv.dataset['message'] = JSON.stringify(message);
     contentP.textContent = message.content;
-    messageDiv.appendChild(nameP);
-    messageDiv.appendChild(document.createElement('br'));
-    messageDiv.appendChild(contentP);
-    thread.appendChild(messageDiv);
+    
     return messageDiv;
 }
 async function sendMessage() {
@@ -39,20 +50,47 @@ async function sendMessage() {
     
     input.disabled = true;
     try {
+        const useStream = true
         const res = await fetch('http://127.0.0.1:11434/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'qwen2.5:1.5b',
                 messages: getCurrentMessages(),
-                stream: false
+                stream: useStream
             })
         });
-        const data = await res.json();
-        console.log(data);
-        const newMessageDiv = displayMessage(data.message)
-        newMessageDiv.scrollIntoView({behavior: "smooth"});
-        input.value = '';
+        if (useStream) {
+            const reader = await res.body.getReader();
+            let finished;
+            const decoder = new TextDecoder();
+            const lines = []
+
+            const placeholderDiv = displayMessage({content: '...', role: 'assistant'});
+            
+            while (!finished) {
+                const { done, value } = await reader.read();
+                const str = decoder.decode(value, {stream: true});
+                for (const lineStr of str.split('\n')) {
+                    console.log(lineStr)
+                    if (lineStr.trim()) {
+                        const line = JSON.parse(lineStr);
+                        lines.push(line);
+                        finished = done || line.done;                   
+                    }
+                }
+                const content = lines.reduce((prev, l) => prev + (l.message?.content || ''), '')
+                const role = 'assistant';
+                displayMessage({ content , role }, placeholderDiv);
+            }
+        } else {
+            const data = await res.json();
+            console.log(data);
+            const newMessageDiv = displayMessage(data.message)
+            newMessageDiv.scrollIntoView({behavior: "smooth"});
+            input.value = '';           
+        }
+
     } catch (error) {
         console.error('Error:', error);
         // responseElement.innerHTML = 'Error occurred';

@@ -19,6 +19,7 @@ body, div {
     min-height: 100px;
     background-color: white;
     overflow-y: scroll;
+    border-radius: 0.5em;
 }
 p.name {
     display: inline-block;
