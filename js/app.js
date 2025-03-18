@@ -39,6 +39,7 @@ function displayMessage(message, inDiv) {
     messageDiv.dataset['message'] = JSON.stringify(message);
     contentP.textContent = message.content;
     
+    messageDiv.scrollIntoView({behavior: "smooth"});
     return messageDiv;
 }
 async function sendMessage() {
