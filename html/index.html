@@ -2,14 +2,14 @@
 <html>
     <head>
         <link rel="stylesheet" href="style.css"></link>
-        <script src="../js/app.js"></script>
+        <script src="../js/app.js" type="module"></script>
     </head>
 
     <body>
         <div class="container">
-            <form>
-                <div class="thread"></div>
-                    <textarea type="text" id="user-input" placeholder="Ask a question..."></textarea>
+            <div class="thread"></div>
+            <form id="input">
+                <textarea type="text" id="user-input" placeholder="Ask a question..."></textarea>
                 <button id="send">Send</button>
             </form>
         </div>

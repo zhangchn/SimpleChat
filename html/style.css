@@ -5,21 +5,28 @@ body, div {
 }
 .container {
     max-width: 800px;
-    min-height: 100vh;
+    height: calc(100vh - 2em);
     margin: 0 auto;
     background-color: lightblue;
     font-size: large;
     padding: 1em;
+    position: relative;
 }
 
 .thread {
     margin: 0.2em;
     width: 100%;
-    max-height: calc(100vh - 5em);
+    max-height: calc(100vh - 10em);
     min-height: 100px;
     background-color: white;
     overflow-y: scroll;
     border-radius: 0.5em;
+}
+form#input {
+    position: fixed;
+    width: 780px;
+    top: calc(100vh - 8.5em);
+    height: 8em;
 }
 p.name {
     display: inline-block;
