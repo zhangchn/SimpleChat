@@ -119,4 +119,4 @@ document.addEventListener('readystatechange', (ev) => {
         })
     }
 })
-// window.parseMarkDown = parseMarkDown;
+window.parseMarkDown = parseMarkDown;

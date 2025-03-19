@@ -56,8 +56,129 @@ const MarkDownState = {
     CODE_BLOCK: 3,
 }
 function parseInlineMarkDown(token) {
-    // TODO: parse inline markdown
-    return document.createTextNode(token.text + '\n')
+    const text = token.text;
+    const elements = [];
+    let i = 0;
+    const states = {
+        NORMAL: 0,
+        BOLD: 1,
+        ITALIC: 2,
+        CODE: 3,
+        LINK_TEXT: 4,
+        LINK_HREF: 5
+    };
+    let currentState = states.NORMAL;
+    let currentText = '';
+    let linkText = '';
+    let linkHref = '';
+    let linkStartIndex = -1;
+
+    function addText(text) {
+        if (text) {
+            elements.push(document.createTextNode(text));
+        }
+    }
+
+    while (i < text.length) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        switch (currentState) {
+            case states.NORMAL:
+                if (char === '*' && nextChar === '*') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.BOLD;
+                    i++;
+                } else if (char === '_' && nextChar === '_') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.BOLD;
+                    i++;
+                } else if (char === '*') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.ITALIC;
+                } else if (char === '_') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.ITALIC;
+                } else if (char === '`') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.CODE;
+                } else if (char === '[') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.LINK_TEXT;
+                    linkStartIndex = i;
+                } else {
+                    currentText += char;
+                }
+                break;
+            case states.BOLD:
+                if (char === '*' && nextChar === '*') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.NORMAL;
+                    i++;
+                } else {
+                    currentText += char;
+                }
+                break;
+            case states.ITALIC:
+                if (char === '*') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.NORMAL;
+                } else if (char === '_') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.NORMAL;
+                } else {
+                    currentText += char;
+                }
+                break;
+            case states.CODE:
+                if (char === '`') {
+                    addText(currentText);
+                    currentText = '';
+                    currentState = states.NORMAL;
+                } else {
+                    currentText += char;
+                }
+                break;
+            case states.LINK_TEXT:
+                if (char === ']') {
+                    linkText = currentText;
+                    currentText = '';
+                    currentState = states.LINK_HREF;
+                } else {
+                    currentText += char;
+                }
+                break;
+            case states.LINK_HREF:
+                if (char === '(') {
+                    currentText = '';
+                } else if (char === ')') {
+                    linkHref = currentText;
+                    const a = document.createElement('a');
+                    a.href = linkHref;
+                    a.appendChild(document.createTextNode(linkText));
+                    elements.push(a);
+                    currentText = '';
+                    currentState = states.NORMAL;
+                } else {
+                    currentText += char;
+                }
+                break;
+        }
+        i++;
+    }
+
+    addText(currentText);
+
+    return elements;
 }
 function parseMarkDown(markdown) {
     const tokens = markdownLexer(markdown)
@@ -79,7 +200,8 @@ function parseMarkDown(markdown) {
                 state = MarkDownState.CODE_BLOCK;
             } else if (token.isListItem) {
                 const listItem = document.createElement('li')
-                listItem.appendChild(parseInlineMarkDown(token))
+                // listItem.appendChild(parseInlineMarkDown(token))
+                parseInlineMarkDown(token).forEach(n => listItem.appendChild(n))
                 const isNumberedList = token.listNumber !== undefined
                 let found = false
                 for (let j = listStack.length - 1; j >= 0; j--) {
@@ -118,7 +240,8 @@ function parseMarkDown(markdown) {
                 p = null
             } else if (token.headingNumber > 0) {
                 const heading = document.createElement('h' + token.headingNumber)
-                heading.appendChild(parseInlineMarkDown(token))
+                parseInlineMarkDown(token).forEach(n => heading.appendChild(n))
+                // heading.appendChild(parseInlineMarkDown(token))
                 root.appendChild(heading)
                 p = null
                 listStack = []
@@ -130,7 +253,8 @@ function parseMarkDown(markdown) {
                         p = document.createElement('p')
                         root.appendChild(p)
                     }
-                    p.appendChild(parseInlineMarkDown(token))
+                    // p.appendChild(parseInlineMarkDown(token))
+                    parseInlineMarkDown(token).forEach(n => p.appendChild(n))
                 }
                 /*
                 if (token.text.length === 0 || p === null) {
