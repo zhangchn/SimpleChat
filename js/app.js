@@ -1,3 +1,4 @@
+import { parseMarkDown } from './md.js'
 function getCurrentMessages() {
     const messages = document.querySelectorAll('.thread .message');
     const result = []
@@ -15,12 +16,12 @@ function displayMessage(message, inDiv) {
     let contentP;
     if (inDiv && inDiv instanceof Element) {
         messageDiv = inDiv;
-        contentP = inDiv.querySelector('p.content');
+        contentP = inDiv.querySelector('div.content');
     } else {
         messageDiv = document.createElement('div');
         const nameP = document.createElement('p');
         nameP.classList.add('name');
-        contentP =  document.createElement('p');
+        contentP =  document.createElement('div');
         messageDiv.classList.add('message');
         messageDiv.classList.add(message.role);
         contentP.classList.add('content');
@@ -29,17 +30,23 @@ function displayMessage(message, inDiv) {
         } else if (message.role === 'assistant') {
             nameP.textContent = 'AI:';
         }
+        const endAnchor = document.createElement('a');
+        endAnchor.classList.add('end-anchor');
         messageDiv.appendChild(nameP);
         messageDiv.appendChild(document.createElement('br'));
         messageDiv.appendChild(contentP);
+        messageDiv.appendChild(endAnchor);
         thread.appendChild(messageDiv);
         created = true;
         console.log('message div created')
     }
     messageDiv.dataset['message'] = JSON.stringify(message);
-    contentP.textContent = message.content;
+    // contentP.textContent = message.content;
+    const newContent = parseMarkDown(message.content);
+    newContent.classList.add('content');
+    messageDiv.replaceChild(newContent, contentP);
     
-    messageDiv.scrollIntoView({behavior: "smooth"});
+    messageDiv.querySelector('.end-anchor').scrollIntoView({behavior: "smooth"});
     return messageDiv;
 }
 async function sendMessage() {
@@ -73,7 +80,7 @@ async function sendMessage() {
                 const { done, value } = await reader.read();
                 const str = decoder.decode(value, {stream: true});
                 for (const lineStr of str.split('\n')) {
-                    console.log(lineStr)
+                    // console.log(lineStr)
                     if (lineStr.trim()) {
                         const line = JSON.parse(lineStr);
                         lines.push(line);
@@ -83,6 +90,9 @@ async function sendMessage() {
                 const content = lines.reduce((prev, l) => prev + (l.message?.content || ''), '')
                 const role = 'assistant';
                 displayMessage({ content , role }, placeholderDiv);
+                if (finished) {
+                    console.log('message finished', content, lines[lines.length - 1]);
+                }
             }
         } else {
             const data = await res.json();
@@ -109,3 +119,4 @@ document.addEventListener('readystatechange', (ev) => {
         })
     }
 })
+// window.parseMarkDown = parseMarkDown;

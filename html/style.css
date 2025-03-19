@@ -31,7 +31,7 @@ form#input {
 p.name {
     display: inline-block;
 }
-p.content {
+.message .content {
     display: inline-block;
     margin: 0.2em 0.5em;
     padding: 0.2em 0.5em;
