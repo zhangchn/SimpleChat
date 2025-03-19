@@ -5,7 +5,7 @@ function markdownLexer(markdown) {
     const headingPattern = /^#+/;
     const listItemPattern = /^\s*[*-]\s+/;
     const numberedListItemPattern = /^\s*\d+\.\s+/;
-    const codeBlockPattern = /^```/;
+    const codeBlockPattern = /^\s*```/;
     const horizontalLinePattern = /^---$/;
     const indentPattern = /^\s+/;
     for (const line of lines) {
@@ -76,6 +76,7 @@ function parseMarkDown(markdown) {
                 codeBlock = document.createElement('pre')
                 root.appendChild(codeBlock)
                 p = null
+                state = MarkDownState.CODE_BLOCK;
             } else if (token.isListItem) {
                 const listItem = document.createElement('li')
                 listItem.appendChild(parseInlineMarkDown(token))
@@ -120,6 +121,7 @@ function parseMarkDown(markdown) {
                 heading.appendChild(parseInlineMarkDown(token))
                 root.appendChild(heading)
                 p = null
+                listStack = []
             } else {
                 if (token.text.trim().length) {
                     // clear list context

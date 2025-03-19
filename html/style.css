@@ -38,6 +38,9 @@ p.name {
     border-radius: 0.3em;
     border: 1px black solid;
 }
+.message .content pre {
+    background-color: wheat;
+}
 .message.user {
     text-align: right;
 }
