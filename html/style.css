@@ -37,10 +37,14 @@ p.name {
     padding: 0.2em 0.5em;
     border-radius: 0.3em;
     border: 1px black solid;
+    max-width: calc(100% - 2em);
 }
 .message .content pre {
     background-color: wheat;
+    max-width: 100%;
+    overflow-x: scroll;
 }
+
 .message.user {
     text-align: right;
 }
