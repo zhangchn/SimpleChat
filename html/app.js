@@ -59,7 +59,12 @@ async function sendMessage() {
     input.disabled = true;
     try {
         const useStream = true
-        const res = await fetch('http://127.0.0.1:11434/api/chat', {
+        const apiUrl = localStorage.getItem('ollamaApiUrl') || 'http://127.0.0.1:11434/api/';
+        const chatUri = apiUrl.endsWith('/') ? `${apiUrl}chat` : `${apiUrl}/chat`;
+        if (chatUri) {
+            console.log(`Loaded chat URI from localStorage: ${chatUri}`);
+        }
+        const res = await fetch(chatUri, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -117,6 +122,33 @@ document.addEventListener('readystatechange', (ev) => {
             ev.preventDefault();
             sendMessage();
         })
+        const showDialogButton = document.querySelector('button#show-api-dialog-btn')
+        showDialogButton.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const dialog = document.querySelector('#api-dialog')
+            if (dialog.classList.contains('dialog-hidden')) {
+                // show
+                dialog.classList.remove('dialog-hidden')
+                dialog.classList.add('dialog')
+            } else {
+                // hide
+                dialog.classList.remove('dialog')
+                dialog.classList.add('dialog-hidden')
+            }
+        })
+        const saveApiUrlButton = document.querySelector('#save-api-btn')
+        saveApiUrlButton.addEventListener('click', (ev) => {
+            ev.preventDefault()
+            const dialog = document.querySelector('#api-dialog')
+            // hide
+            dialog.classList.remove('dialog')
+            dialog.classList.add('dialog-hidden')
+            const uri = document.querySelector('#api-url').value
+            localStorage.setItem('ollamaApiUrl', uri)
+        })
+        // load from localStorage
+        const uri = localStorage.getItem('ollamaApiUrl')
+        document.querySelector('#api-url').value = uri
     }
 })
 window.parseMarkDown = parseMarkDown;

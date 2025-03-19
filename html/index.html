@@ -4,6 +4,13 @@
         <link rel="stylesheet" href="style.css"></link>
         <script src="app.js" type="module"></script>
     </head>
+    <button id="show-api-dialog-btn">⚙️</button>
+    <div id="api-dialog" class="dialog-hidden">
+        <h2>Ollama API</h2>
+        <label for="api-url">URI:</label>
+        <input type="text" id="api-url" placeholder="http://127.0.0.1:11434/api/" />
+        <button id="save-api-btn">💾</button>
+    </div>
 
     <body>
         <div class="container">
