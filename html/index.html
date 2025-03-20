@@ -6,16 +6,20 @@
         <link rel="stylesheet" href="style.css"></link>
         <script src="app.js" type="module"></script>
     </head>
-    <button id="show-api-dialog-btn">⚙️</button>
-    <div id="api-dialog" class="dialog-hidden">
-        <h2>Ollama API</h2>
-        <label for="api-url">URI:</label>
-        <input type="text" id="api-url" placeholder="http://127.0.0.1:11434/api/" />
-        <button id="save-api-btn">💾</button>
-    </div>
-
     <body>
+        <button id="show-api-dialog-btn">⚙️</button>
         <div class="container">
+            <div id="api-dialog" class="dialog-hidden">
+                <h2>Ollama API</h2>
+                <label for="api-url">URI:</label>
+                <input type="text" id="api-url" placeholder="http://127.0.0.1:11434/api/" />
+                <br/>
+                <label for="model-id">Model ID:</label>
+                <input type="text" id="model-id" placeholder="qwen2.5:1.5b" />
+                <select id="model-id-selector">
+                </select>
+                <button id="save-api-btn">💾</button>
+            </div>
             <div class="thread"></div>
             <form id="input">
                 <textarea type="text" id="user-input" placeholder="Ask a question..."></textarea>

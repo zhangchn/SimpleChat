@@ -49,6 +49,32 @@ function displayMessage(message, inDiv) {
     messageDiv.querySelector('.end-anchor').scrollIntoView({behavior: "smooth"});
     return messageDiv;
 }
+async function loadModels(selectedId) {
+    console.log('load models with selectedId', selectedId)
+    const apiUrl = localStorage.getItem('ollamaApiUrl') || 'http://127.0.0.1:11434/api/';
+    const tagsUri = apiUrl.endsWith('/') ? `${apiUrl}tags` : `${apiUrl}/tags`;
+    const res = await fetch(tagsUri, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+    }) 
+    const models = (await res.json()).models;
+    const modelSelect = document.querySelector('select#model-id-selector')
+    const modelOptions = modelSelect.querySelectorAll('option')
+    for (let i = modelOptions.length - 1; i > -1; i--) {
+        modelSelect.removeChild(modelOptions[i])
+    }
+    for (const model of models) {
+        const o = document.createElement('option')
+        o.value = model.model
+        const psize = model.details.parameter_size
+        const qlevel = model.details.quantization_level
+        o.textContent = `${model.name} ${psize}(${qlevel})`
+        modelSelect.appendChild(o)
+        if (model.model === selectedId) {
+            modelSelect.value = selectedId
+        }
+    }
+}
 async function sendMessage() {
     const input = document.getElementById('user-input');
     if (!input.value.trim()) return;
@@ -145,10 +171,21 @@ document.addEventListener('readystatechange', (ev) => {
             dialog.classList.add('dialog-hidden')
             const uri = document.querySelector('#api-url').value
             localStorage.setItem('ollamaApiUrl', uri)
+            
+            const modelId = document.querySelector('#model-id').value
+            localStorage.setItem('ollamaModelId', modelId)
+        })
+        const modelSelect = document.querySelector('#model-id-selector')
+        modelSelect.addEventListener('change', (ev) => {
+            const modelId = modelSelect.value
+            document.querySelector('#model-id').value = modelId
         })
         // load from localStorage
         const uri = localStorage.getItem('ollamaApiUrl')
         document.querySelector('#api-url').value = uri
+        const modelId = localStorage.getItem('ollamaModelId') || document.querySelector('#model-id').placeholder
+        document.querySelector('#model-id').value = modelId
+        loadModels(modelId)
     }
 })
 window.parseMarkDown = parseMarkDown;
