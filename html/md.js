@@ -71,18 +71,25 @@ function inlineMarkDownLexer(lineToken) {
                     tokens.push({ type: "TEXT", text: currentText})
                     currentText = ''
                 } else if (c === '*') {
+                    if (currentText.length) {
+                        tokens.push({type: "TEXT", text: currentText})
+                        currentText = ''
+                    }
                     const tagB = (i < lineToken.text.length - 1) && lineToken.text[i + 1] === '*';
                     const tagBI = tagB && (i < lineToken.text.length - 2) && lineToken.text[i + 2] === '*';
                     // const isEndTag = (isBold || isBoldItalic || isItalic)
                     const isEndTag = (isBold && tagB) || (isItalic || !tagB)
                     if (tagBI) {
-                        tokens.push({ type: "TAG", text: "b", end: isEndTag})
-                        tokens.push({ type: "TAG", text: "i", end: isEndTag})
-                        i+=2
                         if (isEndTag) {
-                            isBold = false
-                            isItalic = false
+                            tokens.push({ type: "TAG", text: "b", end: isEndTag})
+                            tokens.push({ type: "TAG", text: "i", end: isEndTag})
+                        } else {
+                            tokens.push({ type: "TAG", text: "i", end: isEndTag})
+                            tokens.push({ type: "TAG", text: "b", end: isEndTag})
                         }
+                        i+=2
+                        isBold = !isEndTag
+                        isItalic = !isEndTag
                     } else if (tagB) {
                         tokens.push({ type: "TAG", text: "b", end: isEndTag})
                         i+=1
@@ -139,15 +146,17 @@ function parseInlineMarkDown(token) {
             if (t.end) {
                 if (insertion && insertion.parentElement) {
                     insertion = insertion.parentElement
+                } else {
+                    insertion = null
                 }
             } else {
                 const e = document.createElement(t.text)
                 if (insertion === null) {
                     elements.push(e)
-                    insertion = e
                 } else {
                     insertion.appendChild(e)
                 }
+                insertion = e
             }
         } else if (t.type === 'PRE') {
             const pre = document.createElement('code')
@@ -263,3 +272,4 @@ function parseMarkDown(markdown) {
 }
 
 export { parseMarkDown };
+
