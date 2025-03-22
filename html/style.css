@@ -10,12 +10,12 @@ body {
     display: none;
 }
 .dialog {
-    position: absolute;
+    position: relative;
     z-index: 100;
     top: 20%;
     border-radius: 2.5em;
     max-width: 800px;
-    width: calc(100vw - 8em);
+    width: calc(100% - 8em);
     padding: 3em;
     background-color: white;
     box-shadow: 0 0 2em dimgray;
@@ -47,17 +47,19 @@ body {
 }
 
 .thread {
+    position: absolute;
     margin: 0.2em;
     padding: 0.2em;
-    width: 100%;
-    max-height: calc(100vh - 10em);
+    width: calc(100% - 2.5em);
+    max-height: calc(100% - 10em);
     min-height: 100px;
     background-color: white;
     overflow-y: scroll;
     border-radius: 0.5em;
+    top: 1em;
 }
 form#input {
-    position: fixed;
+    position: absolute;
     width: calc(100% - 1em);
     max-width: calc(800px - 1em);
     top: calc(100vh - 8.5em);

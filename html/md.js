@@ -55,129 +55,110 @@ const MarkDownState = {
     LIST_ITEM: 2,
     CODE_BLOCK: 3,
 }
+function inlineMarkDownLexer(lineToken) {
+    const tokens = []
+    let currentText = ''
+    let state = 0
+    let isBold = false
+    let isItalic = false
+    let isUnderline = false
+    for (let i = 0; i < lineToken.text.length; i++) {
+        const c = lineToken.text[i]
+        switch (state) {
+            case 0:
+                if (c === '`') {
+                    state = 1
+                    tokens.push({ type: "TEXT", text: currentText})
+                    currentText = ''
+                } else if (c === '*') {
+                    const tagB = (i < lineToken.text.length - 1) && lineToken.text[i + 1] === '*';
+                    const tagBI = tagB && (i < lineToken.text.length - 2) && lineToken.text[i + 2] === '*';
+                    // const isEndTag = (isBold || isBoldItalic || isItalic)
+                    const isEndTag = (isBold && tagB) || (isItalic || !tagB)
+                    if (tagBI) {
+                        tokens.push({ type: "TAG", text: "b", end: isEndTag})
+                        tokens.push({ type: "TAG", text: "i", end: isEndTag})
+                        i+=2
+                        if (isEndTag) {
+                            isBold = false
+                            isItalic = false
+                        }
+                    } else if (tagB) {
+                        tokens.push({ type: "TAG", text: "b", end: isEndTag})
+                        i+=1
+                        isBold = !isEndTag
+                    } else {
+                        tokens.push({ type: "TAG", text: "i", end: isEndTag})
+                        isItalic = !isEndTag
+                    }
+                }  else if (c === '~') {
+                    const oneTilde = (i < lineToken.text.length - 1) && lineToken.text[i + 1] === '~';
+                    const twoTilde = oneTilde && (i < lineToken.text.length - 2) && lineToken.text[i + 2] === '~';
+                    const isEndTag = isUnderline
+                    if (twoTilde) {
+                        tokens.push({ type: "TAG", text: "u", end: isEndTag})
+                        isUnderline = !isEndTag
+                        i+=2
+                    }
+                } else {
+                    currentText += c
+                }
+                break
+            case 1:
+                if (c === '\\' && i < lineToken.text.length - 1 && lineToken.text[i+1] === '`') {
+                    currentText += '`'
+                    i += 1
+                } else if (c === '`') {
+                    tokens.push({ type: "PRE", text: currentText})
+                    currentText = ''
+                    state = 0
+                } else {
+                    currentText += c
+                }
+                break
+        } 
+    }
+    if (currentText.length) {
+        tokens.push({ type: "TEXT", text: currentText})
+    } 
+    return tokens
+}
 function parseInlineMarkDown(token) {
-    const text = token.text;
-    const elements = [];
-    let i = 0;
-    const states = {
-        NORMAL: 0,
-        BOLD: 1,
-        ITALIC: 2,
-        CODE: 3,
-        LINK_TEXT: 4,
-        LINK_HREF: 5
-    };
-    let currentState = states.NORMAL;
-    let currentText = '';
-    let linkText = '';
-    let linkHref = '';
-    let linkStartIndex = -1;
-
-    function addText(text) {
-        if (text) {
-            elements.push(document.createTextNode(text));
+    const inlineTokens = inlineMarkDownLexer(token);
+    const elements = []
+    let insertion = null
+    for (const t of inlineTokens) {
+        if (t.type === 'TEXT') {
+            const tNode = document.createTextNode(t.text)
+            if (insertion === null) {
+                elements.push(tNode)
+            } else { 
+                insertion.appendChild(tNode)
+            }
+        } else if (t.type === 'TAG') {
+            if (t.end) {
+                if (insertion && insertion.parentElement) {
+                    insertion = insertion.parentElement
+                }
+            } else {
+                const e = document.createElement(t.text)
+                if (insertion === null) {
+                    elements.push(e)
+                    insertion = e
+                } else {
+                    insertion.appendChild(e)
+                }
+            }
+        } else if (t.type === 'PRE') {
+            const pre = document.createElement('code')
+            pre.appendChild(document.createTextNode(t.text))
+            if (insertion === null) {
+                elements.push(pre)
+            } else {
+                insertion.appendChild(pre)
+            }
         }
     }
-
-    while (i < text.length) {
-        const char = text[i];
-        const nextChar = text[i + 1];
-
-        switch (currentState) {
-            case states.NORMAL:
-                if (char === '*' && nextChar === '*') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.BOLD;
-                    i++;
-                } else if (char === '_' && nextChar === '_') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.BOLD;
-                    i++;
-                } else if (char === '*') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.ITALIC;
-                } else if (char === '_') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.ITALIC;
-                } else if (char === '`') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.CODE;
-                } else if (char === '[') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.LINK_TEXT;
-                    linkStartIndex = i;
-                } else {
-                    currentText += char;
-                }
-                break;
-            case states.BOLD:
-                if (char === '*' && nextChar === '*') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.NORMAL;
-                    i++;
-                } else {
-                    currentText += char;
-                }
-                break;
-            case states.ITALIC:
-                if (char === '*') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.NORMAL;
-                } else if (char === '_') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.NORMAL;
-                } else {
-                    currentText += char;
-                }
-                break;
-            case states.CODE:
-                if (char === '`') {
-                    addText(currentText);
-                    currentText = '';
-                    currentState = states.NORMAL;
-                } else {
-                    currentText += char;
-                }
-                break;
-            case states.LINK_TEXT:
-                if (char === ']') {
-                    linkText = currentText;
-                    currentText = '';
-                    currentState = states.LINK_HREF;
-                } else {
-                    currentText += char;
-                }
-                break;
-            case states.LINK_HREF:
-                if (char === '(') {
-                    currentText = '';
-                } else if (char === ')') {
-                    linkHref = currentText;
-                    const a = document.createElement('a');
-                    a.href = linkHref;
-                    a.appendChild(document.createTextNode(linkText));
-                    elements.push(a);
-                    currentText = '';
-                    currentState = states.NORMAL;
-                } else {
-                    currentText += char;
-                }
-                break;
-        }
-        i++;
-    }
-
-    addText(currentText);
-
     return elements;
 }
 function parseMarkDown(markdown) {
@@ -195,7 +176,11 @@ function parseMarkDown(markdown) {
                 p = null
             } else if (token.isCodeBlock) {
                 codeBlock = document.createElement('pre')
-                root.appendChild(codeBlock)
+                if (listStack.length === 0) {
+                    root.appendChild(codeBlock)
+                } else {
+                    listStack[listStack.length - 1].lastElementChild.appendChild(codeBlock)
+                }
                 p = null
                 state = MarkDownState.CODE_BLOCK;
             } else if (token.isListItem) {
