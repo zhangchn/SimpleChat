@@ -34,7 +34,7 @@ function displayMessage(message, inDiv, info) {
         } else if (message.role === 'assistant') {
             nameP.textContent = 'AI:';
         }
-        const endAnchor = document.createElement('a');
+        const endAnchor = document.createElement('div');
         endAnchor.classList.add('end-anchor');
         messageDiv.appendChild(nameP);
         messageDiv.appendChild(document.createElement('br'));
@@ -58,7 +58,7 @@ function displayMessage(message, inDiv, info) {
     newContent.classList.add('content');
     messageDiv.replaceChild(newContent, contentP);
     
-    messageDiv.querySelector('.end-anchor').scrollIntoView({behavior: "smooth"});
+    messageDiv.querySelector('.end-anchor').scrollIntoView({behavior: "smooth", block: "end"});
     return messageDiv;
 }
 async function loadModels(selectedId) {
@@ -156,7 +156,7 @@ async function sendMessage() {
             const data = await res.json();
             console.log(data);
             const newMessageDiv = displayMessage(data.message)
-            newMessageDiv.scrollIntoView({behavior: "smooth"});
+            newMessageDiv.scrollIntoView({behavior: "smooth", block: "end"});
             input.value = '';           
         }
 
