@@ -9,21 +9,25 @@ function getCurrentMessages() {
     }
     return result;
 }
-function displayMessage(message, inDiv) {
+function displayMessage(message, inDiv, info) {
     let messageDiv;
     const thread = document.querySelector('div.thread');
     let created;
     let contentP;
+    let infoDiv;
     if (inDiv && inDiv instanceof Element) {
         messageDiv = inDiv;
         contentP = inDiv.querySelector('div.content');
+        infoDiv = inDiv.querySelector('div.info');
     } else {
         messageDiv = document.createElement('div');
         const nameP = document.createElement('p');
         nameP.classList.add('name');
         contentP =  document.createElement('div');
+        infoDiv =  document.createElement('div');
         messageDiv.classList.add('message');
         messageDiv.classList.add(message.role);
+        infoDiv.classList.add('info');
         contentP.classList.add('content');
         if (message.role === 'user') {
             nameP.textContent = 'Me:';
@@ -36,11 +40,19 @@ function displayMessage(message, inDiv) {
         messageDiv.appendChild(document.createElement('br'));
         messageDiv.appendChild(contentP);
         messageDiv.appendChild(endAnchor);
+        messageDiv.appendChild(infoDiv);
         thread.appendChild(messageDiv);
         created = true;
         console.log('message div created')
+
     }
     messageDiv.dataset['message'] = JSON.stringify(message);
+    if (typeof info === 'object') {
+        infoDiv.textContent = `load: ${(info.load_duration / 10e6).toFixed(3)}ms;
+        eval: ${(info.eval_duration / 10e6).toFixed(3)}ms;
+        prompt_eval: ${(info.prompt_eval_duration / 10e6).toFixed(3)}ms;
+        `;
+    }
     // contentP.textContent = message.content;
     const newContent = parseMarkDown(message.content);
     newContent.classList.add('content');
@@ -87,6 +99,8 @@ async function sendMessage() {
         const useStream = true
         const apiUrl = localStorage.getItem('ollamaApiUrl') || 'http://127.0.0.1:11434/api/';
         const chatUri = apiUrl.endsWith('/') ? `${apiUrl}chat` : `${apiUrl}/chat`;
+
+        const modelId = localStorage.getItem('ollamaModelId') || document.querySelector('#model-id').placeholder
         if (chatUri) {
             console.log(`Loaded chat URI from localStorage: ${chatUri}`);
         }
@@ -94,7 +108,7 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'qwen2.5:1.5b',
+                model: modelId,
                 messages: getCurrentMessages(),
                 stream: useStream
             })
@@ -120,7 +134,20 @@ async function sendMessage() {
                 }
                 const content = lines.reduce((prev, l) => prev + (l.message?.content || ''), '')
                 const role = 'assistant';
-                displayMessage({ content , role }, placeholderDiv);
+                if (lines[lines.length - 1].done) {
+                    const { 
+                        prompt_eval_duration, load_duration, 
+                        eval_duration, prompt_eval_count, eval_count 
+                    } = lines[lines.length - 1]
+                    
+                    const info = { 
+                        prompt_eval_duration, load_duration, 
+                        eval_duration, prompt_eval_count, eval_count 
+                    }
+                    displayMessage({ content , role }, placeholderDiv, info);
+                } else {
+                    displayMessage({ content , role }, placeholderDiv);
+                }
                 if (finished) {
                     console.log('message finished', content, lines[lines.length - 1]);
                 }
