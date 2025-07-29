@@ -98,6 +98,14 @@ p.name {
     box-shadow: 0 0 4.5em deepskyblue;
 }
 
+.think-content {
+    color: gray;
+    font-size: 0.8rem;
+}
+.think-hidden {
+    display: none;
+}
+
 textarea#user-input {
     font-size: large;
     width: calc(100% - 2em);

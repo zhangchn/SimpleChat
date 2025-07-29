@@ -15,22 +15,40 @@ function displayMessage(message, inDiv, info) {
     let created;
     let contentP;
     let infoDiv;
+    let thinkD;
+    let thinkContent
     if (inDiv && inDiv instanceof Element) {
         messageDiv = inDiv;
         contentP = inDiv.querySelector('div.content');
+        thinkD = inDiv.querySelector('div.think');
+        thinkContent = thinkD.querySelector('div.think-content')
         infoDiv = inDiv.querySelector('div.info');
     } else {
         messageDiv = document.createElement('div');
         const nameP = document.createElement('p');
         nameP.classList.add('name');
-        contentP =  document.createElement('div');
-        infoDiv =  document.createElement('div');
+        thinkD = document.createElement('div');
+        const foldButton = document.createElement('button')
+        thinkContent = document.createElement('div');
+        thinkContent.classList.add('think-content')
+        thinkContent.classList.add('think-hidden')
+        foldButton.textContent = '>';
+        foldButton.addEventListener('click', function(ev) {
+            foldButton.textContent = foldButton.textContent === '>' ? 'V' : '>'
+            thinkContent.classList.toggle('think-hidden')
+        })
+        contentP = document.createElement('div');
+        infoDiv = document.createElement('div');
+        thinkD.classList.add('think');
         messageDiv.classList.add('message');
         messageDiv.classList.add(message.role);
+        thinkD.appendChild(foldButton);
+        thinkD.appendChild(thinkContent);
         infoDiv.classList.add('info');
         contentP.classList.add('content');
         if (message.role === 'user') {
             nameP.textContent = 'Me:';
+            thinkD.style.display = 'none'
         } else if (message.role === 'assistant') {
             nameP.textContent = 'AI:';
         }
@@ -38,13 +56,13 @@ function displayMessage(message, inDiv, info) {
         endAnchor.classList.add('end-anchor');
         messageDiv.appendChild(nameP);
         messageDiv.appendChild(document.createElement('br'));
+        messageDiv.appendChild(thinkD);
         messageDiv.appendChild(contentP);
         messageDiv.appendChild(endAnchor);
         messageDiv.appendChild(infoDiv);
         thread.appendChild(messageDiv);
         created = true;
         console.log('message div created')
-
     }
     messageDiv.dataset['message'] = JSON.stringify(message);
     if (typeof info === 'object') {
@@ -54,12 +72,27 @@ function displayMessage(message, inDiv, info) {
         `;
     }
     // contentP.textContent = message.content;
-    const newContent = parseMarkDown(message.content);
+    const { think, content } = separateThinking(message.content)
+    if (think && !content) {
+        console.log('think', think)
+    }
+    const newContent = parseMarkDown(content);
     newContent.classList.add('content');
     messageDiv.replaceChild(newContent, contentP);
+    thinkContent.textContent = think
     
     messageDiv.querySelector('.end-anchor').scrollIntoView({behavior: "smooth", block: "end"});
     return messageDiv;
+}
+function separateThinking(inText) {
+    const pattern = RegExp(/<think>(.*?)<\/think>(.+)/s)
+    const m = inText.match(pattern)
+    if (m) {
+        console.log('sep match')
+        return { think: m[1], content: m[2] }
+    } else {
+        return { think: '', content: inText }
+    }
 }
 async function loadModels(selectedId) {
     console.log('load models with selectedId', selectedId)
@@ -98,7 +131,7 @@ async function sendMessage() {
     try {
         const useStream = true
         const apiUrl = localStorage.getItem('ollamaApiUrl') || 'http://127.0.0.1:11434/api/';
-        const chatUri = apiUrl.endsWith('/') ? `${apiUrl}chat` : `${apiUrl}/chat`;
+        const chatUri = apiUrl.endsWith('/') ? `${apiUrl}chat/completions` : `${apiUrl}/chat/completions`;
 
         const modelId = localStorage.getItem('ollamaModelId') || document.querySelector('#model-id').placeholder
         if (chatUri) {
@@ -124,15 +157,23 @@ async function sendMessage() {
             while (!finished) {
                 const { done, value } = await reader.read();
                 const str = decoder.decode(value, {stream: true});
-                for (const lineStr of str.split('\n')) {
+                for (let lineStr of str.split('\n')) {
                     // console.log(lineStr)
+                    finished ||= done
                     if (lineStr.trim()) {
+                        if (lineStr.startsWith('data: ')) {
+                            lineStr = lineStr.substring(6)
+                        }
+                        if (lineStr.startsWith('[DONE]')) {
+                            finished = true
+                            break
+                        }
                         const line = JSON.parse(lineStr);
                         lines.push(line);
-                        finished = done || line.done;                   
+                        finished ||= line.done;                   
                     }
                 }
-                const content = lines.reduce((prev, l) => prev + (l.message?.content || ''), '')
+                const content = lines.reduce((prev, l) => prev + (l.message?.content || l.choices[0].delta.content || ''), '')
                 const role = 'assistant';
                 if (lines[lines.length - 1].done) {
                     const { 
